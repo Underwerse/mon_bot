@@ -1,6 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api'
 import { exec } from 'child_process'
-import { homedir } from 'os'
+import axios from 'axios';
 import dotenv from 'dotenv'
 import { readdir, stat, readFile } from 'fs'
 
