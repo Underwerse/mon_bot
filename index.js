@@ -100,6 +100,7 @@ bot.onText(/Check free space/, (msg) => {
 })
 
 bot.onText(/Get advice/, async (msg) => {
+  const chatId = msg.chat.id
   await axios
       .get(adviceUrl)
       .then((response) => {
