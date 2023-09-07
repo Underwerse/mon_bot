@@ -14,6 +14,7 @@ const exec_pass = process.env.EXEC_PASS
   : logger.error(`EXEC_PASS must be defined in the .env-file`)
 
 let chatId
+const adviceUrl = 'http://fucking-great-advice.ru/api/random';
 
 /* Create a bot instance */
 const bot = new TelegramBot(token, { polling: true })
@@ -30,6 +31,7 @@ const menu = {
         { text: 'Check free space' },
         // { text: 'git status' },
         { text: 'Run command' },
+        { text: 'Get advice' },
       ],
     ],
     resize_keyboard: true,
@@ -95,6 +97,19 @@ bot.onText(/Check free space/, (msg) => {
       bot.sendMessage(chatId, `<pre>${stdout}</pre>`, { parse_mode: 'HTML' })
     }
   )
+})
+
+bot.onText(/Get advice/, async (msg) => {
+  await axios
+      .get(adviceUrl)
+      .then((response) => {
+        const advice = response.data.text;
+        bot.sendMessage(chatId, advice);
+      })
+      .catch((error) => {
+        console.error(error);
+        bot.sendMessage(chatId, 'Advices are not available right now');
+      });
 })
 
 /* bot.onText(/git status/, (msg) => {
