@@ -140,7 +140,7 @@ bot.onText(/Run command/, (msg) => {
     /* Check if sent message is from the initial user */
     if (msg.chat.id === chatId) {
       /* Get PIN from user */
-      const pass = parseInt(msg.text)
+      const pass = msg.text
       /* Remove message with entered PIN from chat history */
       bot.deleteMessage(chatId, msg.message_id)
       /* Check if entered PIN correct */
@@ -193,7 +193,7 @@ bot.onText(/Run command/, (msg) => {
         /* Listen messages from user for execution */
         bot.on('message', commandHandler)
       } else {
-        bot.sendMessage(chatId, 'Wrong PIN: try again or type "0" for exit...')
+        bot.sendMessage(chatId, 'Неправильный PIN-код: повторите попытку или введите "0" для выхода...')
       }
     }
   }
@@ -209,7 +209,7 @@ bot.onText(/Run command/, (msg) => {
       // отправляем сообщение об успешном выходе из режима ввода кодового слова
       bot.sendMessage(
         chatId,
-        'Successfully exited from the PIN-check mode'
+        'Успешный выход из режима ввода команд'
       )
     }
   }
