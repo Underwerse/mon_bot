@@ -25,7 +25,7 @@ const menu = {
       [
         { text: 'Check apps status' },
         { text: 'restart TEST app' },
-        { text: 'restart PROD app' },
+        { text: 'WTF?' },
       ],
       [
         { text: 'Check free space' },
@@ -74,8 +74,8 @@ bot.onText(/restart TEST app/, (msg) => {
   })
 })
 
-bot.onText(/restart PROD app/, (msg) => {
-  exec('pm2 restart bi_frontend', (error, stdout, stderr) => {
+bot.onText(/WTF?/, (msg) => {
+  exec('tail -n 50 /home/y_dev/nohup.out', (error, stdout, stderr) => {
     if (error) {
       logger.error(`exec error: ${error}`)
       return
