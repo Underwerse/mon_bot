@@ -8,10 +8,10 @@ dotenv.config()
 
 const token = process.env.TELEGRAM_TOKEN
   ? process.env.TELEGRAM_TOKEN
-  : logger.error(`TELEGRAM_TOKEN must be defined in the .env-file`)
+  : console.error(`TELEGRAM_TOKEN must be defined in the .env-file`)
 const exec_pass = process.env.EXEC_PASS
   ? process.env.EXEC_PASS
-  : logger.error(`EXEC_PASS must be defined in the .env-file`)
+  : console.error(`EXEC_PASS must be defined in the .env-file`)
 
 let chatId
 const adviceUrl = 'http://fucking-great-advice.ru/api/random';
@@ -23,8 +23,8 @@ const menu = {
   reply_markup: {
     keyboard: [
       [
-        { text: 'Check apps status' },
-        { text: 'restart TEST app' },
+        { text: 'Apps status && git branch' },
+        { text: 'restart frontend' },
         { text: 'WTF?' },
       ],
       [
@@ -44,17 +44,18 @@ bot.onText(/\/start/, (msg) => {
   chatId = msg.chat.id
 })
 
-bot.onText(/Check apps status/, (msg) => {
+bot.onText(/Apps status && git branch/, (msg) => {
   exec(
     `pm2 jlist | jq -r '.[] | [
       .pm_id, .name, 
       .pm2_env.status, 
       ((.pm2_env.pm_uptime + 3 * 3600000)/1000 | strftime("%H:%M:%S"))
-    ] | @tsv'
-  `,
+    ] | @tsv' &&
+    cd /home/waadmin/frontend_swam &&
+    git status`,
     (error, stdout, stderr) => {
       if (error) {
-        logger.error(`exec error: ${error}`)
+        console.error(`exec error: ${error}`)
         return
       }
       const chatId = msg.chat.id
@@ -63,10 +64,10 @@ bot.onText(/Check apps status/, (msg) => {
   )
 })
 
-bot.onText(/restart TEST app/, (msg) => {
-  exec('pm2 restart frontend_test', (error, stdout, stderr) => {
+bot.onText(/restart frontend/, (msg) => {
+  exec('pm2 restart frontend_swam', (error, stdout, stderr) => {
     if (error) {
-      logger.error(`exec error: ${error}`)
+      console.error(`exec error: ${error}`)
       return
     }
     const chatId = msg.chat.id
@@ -75,22 +76,26 @@ bot.onText(/restart TEST app/, (msg) => {
 })
 
 bot.onText(/WTF?/, (msg) => {
-  exec('tail -n 50 /home/y_dev/nohup.out', (error, stdout, stderr) => {
+  exec('tail -n 40 $HOME/nohup.out', (error, stdout, stderr) => {
     if (error) {
-      logger.error(`exec error: ${error}`)
+      console.error(`exec error: ${error}`)
       return
     }
+
+    // Заменяем все символы тегов на подчеркивание
+    const cleanedOutput = stdout.replace(/<[^>]+>/g, '_')
+
     const chatId = msg.chat.id
-    bot.sendMessage(chatId, `<pre>${stdout}</pre>`, { parse_mode: 'HTML' })
+    bot.sendMessage(chatId, `<pre>${cleanedOutput}</pre>`, { parse_mode: 'HTML' })
   })
 })
 
 bot.onText(/Check free space/, (msg) => {
   exec(
-    'df -h --output=source,size,used,avail /dev/mapper/f--vg-root',
+    'df -h --output=source,size,used,avail /dev/mapper/webapp--svam--vg-root',
     (error, stdout, stderr) => {
       if (error) {
-        logger.error(`exec error: ${error}`)
+        console.error(`exec error: ${error}`)
         return
       }
       const chatId = msg.chat.id
@@ -120,7 +125,7 @@ bot.onText(/Get advice/, async (msg) => {
       git pull origin main`,
     (error, stdout, stderr) => {
       if (error) {
-        logger.error(`exec error: ${error}`)
+        console.error(`exec error: ${error}`)
         return
       }
       const chatId = msg.chat.id
@@ -221,7 +226,7 @@ bot.onText(/Run command/, (msg) => {
 })
 
 /* Set the path to the directory containing the log files to monitor */
-const logDir = '/home/y_dev/logs'
+const logDir = process.env.LOG_FOLDER_PATH
 const filePathToMonitor = `${logDir}/status.log`
 
 let lastModified = 0
@@ -250,8 +255,10 @@ function checkLogs() {
         /* get the new content added to the file */
         const newData = data.split('\n').slice(-2).join('\n')
 
-        /* send the new content as a message */
-        bot.sendMessage(205813238, `Server status changed:\n${newData}`)
+        if (newData.includes('frontend')) {
+          /* send the new content as a message */
+          bot.sendMessage(205813238, `Swam frontend status changed:\n${newData}`)
+        }
       })
     }
 
