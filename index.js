@@ -40,7 +40,7 @@ const menu = {
 }
 
 bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(msg.chat.id, 'Wellcome to Linux server monitoring bot!', menu)
+  bot.sendMessage(msg.chat.id, 'Wellcome to svam-front server monitoring bot!', menu)
   chatId = msg.chat.id
 })
 
@@ -51,7 +51,7 @@ bot.onText(/Apps status && git branch/, (msg) => {
       .pm2_env.status, 
       ((.pm2_env.pm_uptime + 3 * 3600000)/1000 | strftime("%H:%M:%S"))
     ] | @tsv' &&
-    cd /home/waadmin/frontend_swam &&
+    cd /home/waadmin/svam_front &&
     git status`,
     (error, stdout, stderr) => {
       if (error) {
@@ -76,7 +76,7 @@ bot.onText(/restart frontend/, (msg) => {
 })
 
 bot.onText(/WTF?/, (msg) => {
-  exec('tail -n 40 $HOME/nohup.out', (error, stdout, stderr) => {
+  exec('tail -n 50 $HOME/nohup.out', (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`)
       return
@@ -92,7 +92,7 @@ bot.onText(/WTF?/, (msg) => {
 
 bot.onText(/Check free space/, (msg) => {
   exec(
-    'df -h --output=source,size,used,avail /dev/mapper/webapp--svam--vg-root',
+    'df -h --output=source,size,used,avail /dev/vda2',
     (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`)
@@ -255,7 +255,7 @@ function checkLogs() {
         /* get the new content added to the file */
         const newData = data.split('\n').slice(-2).join('\n')
 
-        if (newData.includes('frontend')) {
+        if (newData.includes('svam_front') || newData.includes('svam_admin')) {
           /* send the new content as a message */
           bot.sendMessage(205813238, `Swam frontend status changed:\n${newData}`)
         }
