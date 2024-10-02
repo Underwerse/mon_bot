@@ -24,13 +24,17 @@ pm2.connect(function (err) {
     process.exit(2)
   }
 
+  console.log('Подключение к PM2 прошло успешно')
+
   pm2.launchBus(function (err, bus) {
     if (err) {
       console.error(err)
       return
     }
 
-    console.log('Мониторинг перезапусков запущен')
+    console.log(
+      `Мониторинг перезапусков запущен, лог-файл ${LOG_FILE_PATH_TO_MONITOR}`
+    )
 
     // Обработчик событий перезапуска
     bus.on('process:restart', (packet) => {
