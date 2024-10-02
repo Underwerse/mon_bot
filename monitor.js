@@ -35,7 +35,7 @@ pm2.connect(function(err) {
     // Обработчик событий перезапуска
     bus.on('process:restart', (packet) => {
       const processName = packet.process.name || packet.process.pm_id;
-      logToFile(`Процесс ${processName} перезапущен`);
+      logRestart(`Процесс ${processName} перезапущен`);
       console.log(`Процесс ${processName} перезапущен`);
     });
   });
