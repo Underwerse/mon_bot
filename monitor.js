@@ -42,5 +42,17 @@ pm2.connect(function (err) {
       logRestart(processName)
       console.log(`Процесс ${processName} перезапущен`)
     })
+
+    bus.on('process:exit', (packet) => {
+      console.log(
+        `Процесс ${packet.process.name || packet.process.pm_id} завершился.`
+      )
+    })
+
+    bus.on('process:start', (packet) => {
+      console.log(
+        `Процесс ${packet.process.name || packet.process.pm_id} запущен.`
+      )
+    })
   })
 })
