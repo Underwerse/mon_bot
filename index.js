@@ -99,7 +99,7 @@ bot.onText(/WTF?/, (msg) => {
 
 bot.onText(/check free space/, (msg) => {
   exec(
-    'df -h --output=source,size,used,avail /dev/vda2',
+    'df -Th',
     (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`)
