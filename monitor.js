@@ -40,7 +40,7 @@ pm2.connect(function (err) {
       const event = packet.event
       const processName = packet.process.name || packet.process.pm_id
 
-      logRestart(`С процессом ${processName} произошло событие ${event}`)
+      logRestart(`С процессом ${processName} произошло событие ${event} ${new Date().toISOString()}\n`)
     })
   })
 })
