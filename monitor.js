@@ -36,23 +36,12 @@ pm2.connect(function (err) {
       `Мониторинг перезапусков запущен, лог-файл ${LOG_FILE_PATH_TO_MONITOR}`
     )
 
-    // Обработчик событий перезапуска
-    bus.on('process:restart', (packet) => {
+    // Подписка на все события PM2
+    bus.on('process:event', (packet) => {
+      const event = packet.event
       const processName = packet.process.name || packet.process.pm_id
-      logRestart(processName)
-      console.log(`Процесс ${processName} перезапущен`)
-    })
 
-    bus.on('process:exit', (packet) => {
-      console.log(
-        `Процесс ${packet.process.name || packet.process.pm_id} завершился.`
-      )
-    })
-
-    bus.on('process:start', (packet) => {
-      console.log(
-        `Процесс ${packet.process.name || packet.process.pm_id} запущен.`
-      )
+      logRestart(`С процессом ${processName} произошло событие ${event}`)
     })
   })
 })
