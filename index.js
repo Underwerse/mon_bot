@@ -32,15 +32,15 @@ const menu = {
   reply_markup: {
     keyboard: [
       [
-        { text: 'Apps status && git branch' },
-        { text: 'restart frontend' },
+        { text: 'pm2 list' },
+        { text: 'pm2 restart all' },
         { text: 'WTF?' },
       ],
       [
-        { text: 'Check free space' },
+        { text: 'check free space' },
         { text: 'git status' },
-        { text: 'Run command' },
-        { text: 'Get advice' },
+        { text: 'run command' },
+        { text: 'get advice' },
       ],
     ],
     resize_keyboard: true,
@@ -49,7 +49,7 @@ const menu = {
 }
 
 bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(msg.chat.id, 'Wellcome to svam-front server monitoring bot!', menu)
+  bot.sendMessage(msg.chat.id, 'Wellcome to linux server monitoring bot!', menu)
   chatId = msg.chat.id
 })
 
@@ -59,9 +59,7 @@ bot.onText(/pm2 list/, (msg) => {
       .pm_id, .name, 
       .pm2_env.status, 
       ((.pm2_env.pm_uptime + 3 * 3600000)/1000 | strftime("%H:%M:%S"))
-    ] | @tsv' &&
-    cd /home/waadmin/svam_front &&
-    git status`,
+    ] | @tsv'`,
     (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`)
