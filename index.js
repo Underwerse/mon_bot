@@ -8,7 +8,7 @@ dotenv.config()
 
 const token = process.env.TELEGRAM_TOKEN
   ? process.env.TELEGRAM_TOKEN
-  : logger.error(`TELEGRAM_TOKEN must be defined in the .env-file`)
+  : console.error(`TELEGRAM_TOKEN must be defined in the .env-file`)
 const exec_pass = process.env.EXEC_PASS
   ? process.env.EXEC_PASS
   : logger.error(`EXEC_PASS must be defined in the .env-file`)
@@ -32,9 +32,9 @@ const menu = {
   reply_markup: {
     keyboard: [
       [
-        { text: 'Check apps status' },
-        { text: 'restart TEST app' },
-        { text: 'restart PROD app' },
+        { text: 'Apps status && git branch' },
+        { text: 'restart frontend' },
+        { text: 'WTF?' },
       ],
       [
         { text: 'Check free space' },
@@ -49,7 +49,7 @@ const menu = {
 }
 
 bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(msg.chat.id, 'Wellcome to Linux server monitoring bot!', menu)
+  bot.sendMessage(msg.chat.id, 'Wellcome to svam-front server monitoring bot!', menu)
   chatId = msg.chat.id
 })
 
@@ -59,11 +59,12 @@ bot.onText(/pm2 list/, (msg) => {
       .pm_id, .name, 
       .pm2_env.status, 
       ((.pm2_env.pm_uptime + 3 * 3600000)/1000 | strftime("%H:%M:%S"))
-    ] | @tsv'
-  `,
+    ] | @tsv' &&
+    cd /home/waadmin/svam_front &&
+    git status`,
     (error, stdout, stderr) => {
       if (error) {
-        logger.error(`exec error: ${error}`)
+        console.error(`exec error: ${error}`)
         return
       }
       const chatId = msg.chat.id
@@ -75,7 +76,7 @@ bot.onText(/pm2 list/, (msg) => {
 bot.onText(/pm2 restart all/, (msg) => {
   exec('pm2 restart all', (error, stdout, stderr) => {
     if (error) {
-      logger.error(`exec error: ${error}`)
+      console.error(`exec error: ${error}`)
       return
     }
     const chatId = msg.chat.id
@@ -83,20 +84,40 @@ bot.onText(/pm2 restart all/, (msg) => {
   })
 })
 
-bot.onText(/restart PROD app/, (msg) => {
-  exec('pm2 restart bi_frontend', (error, stdout, stderr) => {
+bot.onText(/WTF?/, (msg) => {
+  exec('tail -n 50 $HOME/nohup.out', (error, stdout, stderr) => {
     if (error) {
-      logger.error(`exec error: ${error}`)
+      console.error(`exec error: ${error}`)
       return
     }
+
+    // Заменяем все символы тегов на подчеркивание
+    const cleanedOutput = stdout.replace(/<[^>]+>/g, '_')
+
     const chatId = msg.chat.id
-    bot.sendMessage(chatId, `<pre>${stdout}</pre>`, { parse_mode: 'HTML' })
+    bot.sendMessage(chatId, `<pre>${cleanedOutput}</pre>`, { parse_mode: 'HTML' })
   })
 })
 
 bot.onText(/Check free space/, (msg) => {
   exec(
-    'df -h --output=source,size,used,avail /dev/mapper/f--vg-root',
+    'df -h --output=source,size,used,avail /dev/vda2',
+    (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`)
+        return
+      }
+      const chatId = msg.chat.id
+      bot.sendMessage(chatId, `<pre>${stdout}</pre>`, { parse_mode: 'HTML' })
+    }
+  )
+})
+
+bot.onText(/git status/, (msg) => {
+  exec(
+    `cd ${GIT_STATUS_FOLDER} &\ 
+      pwd $\ 
+      git pull origin main`,
     (error, stdout, stderr) => {
       if (error) {
         logger.error(`exec error: ${error}`)
@@ -149,7 +170,7 @@ bot.onText(/Run command/, (msg) => {
     /* Check if sent message is from the initial user */
     if (msg.chat.id === chatId) {
       /* Get PIN from user */
-      const pass = parseInt(msg.text)
+      const pass = msg.text
       /* Remove message with entered PIN from chat history */
       bot.deleteMessage(chatId, msg.message_id)
       /* Check if entered PIN correct */
@@ -202,7 +223,7 @@ bot.onText(/Run command/, (msg) => {
         /* Listen messages from user for execution */
         bot.on('message', commandHandler)
       } else {
-        bot.sendMessage(chatId, 'Wrong PIN: try again or type "0" for exit...')
+        bot.sendMessage(chatId, 'Неправильный PIN-код: повторите попытку или введите "0" для выхода...')
       }
     }
   }
@@ -218,7 +239,7 @@ bot.onText(/Run command/, (msg) => {
       // отправляем сообщение об успешном выходе из режима ввода кодового слова
       bot.sendMessage(
         chatId,
-        'Successfully exited from the PIN-check mode'
+        'Успешный выход из режима ввода команд'
       )
     }
   }
