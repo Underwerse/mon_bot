@@ -97,7 +97,7 @@ bot.onText(/WTF?/, (msg) => {
   })
 })
 
-bot.onText(/Check free space/, (msg) => {
+bot.onText(/check free space/, (msg) => {
   exec(
     'df -h --output=source,size,used,avail /dev/vda2',
     (error, stdout, stderr) => {
@@ -115,7 +115,7 @@ bot.onText(/git status/, (msg) => {
   exec(
     `cd ${GIT_STATUS_FOLDER} &\ 
       pwd $\ 
-      git pull origin main`,
+      git status`,
     (error, stdout, stderr) => {
       if (error) {
         logger.error(`exec error: ${error}`)
@@ -127,23 +127,7 @@ bot.onText(/git status/, (msg) => {
   )
 })
 
-bot.onText(/git status/, (msg) => {
-  exec(
-    `cd ${GIT_STATUS_FOLDER} &\ 
-      pwd $\ 
-      git pull origin main`,
-    (error, stdout, stderr) => {
-      if (error) {
-        logger.error(`exec error: ${error}`)
-        return
-      }
-      const chatId = msg.chat.id
-      bot.sendMessage(chatId, `<pre>${stdout}</pre>`, { parse_mode: 'HTML' })
-    }
-  )
-})
-
-bot.onText(/Get advice/, async (msg) => {
+bot.onText(/get advice/, async (msg) => {
   const chatId = msg.chat.id
   await axios
       .get(adviceUrl)
