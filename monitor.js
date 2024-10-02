@@ -1,11 +1,17 @@
 import pm2 from 'pm2';
 import fs from 'fs';
-const logFilePath = `~/logs/status.log`;
+import dotenv from 'dotenv'
+
+dotenv.config()
+
+const LOG_FILE_PATH_TO_MONITOR = process.env.LOG_FILE_PATH_TO_MONITOR
+  ? process.env.LOG_FILE_PATH_TO_MONITOR
+  : logger.error(`LOG_FILE_PATH_TO_MONITOR must be defined in the .env-file`)
 
 // Функция для записи в лог-файл
 function logRestart(processName) {
   const message = `Процесс PM2 с именем ${processName} перезапустился - ${new Date().toISOString()}\n`;
-  fs.appendFile(logFilePath, message, (err) => {
+  fs.appendFile(LOG_FILE_PATH_TO_MONITOR, message, (err) => {
     if (err) {
       console.error('Ошибка записи в лог файл', err);
     }
