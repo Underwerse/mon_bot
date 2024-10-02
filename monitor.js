@@ -9,8 +9,7 @@ const LOG_FILE_PATH_TO_MONITOR = process.env.LOG_FILE_PATH_TO_MONITOR
   : console.error(`LOG_FILE_PATH_TO_MONITOR must be defined in the .env-file`)
 
 // Функция для записи в лог-файл
-function logRestart(processName) {
-  const message = `Процесс PM2 с именем ${processName} перезапустился - ${new Date().toISOString()}\n`
+function logRestart(message) {
   fs.appendFile(LOG_FILE_PATH_TO_MONITOR, message, (err) => {
     if (err) {
       console.error('Ошибка записи в лог файл', err)
