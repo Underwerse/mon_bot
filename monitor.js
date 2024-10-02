@@ -32,11 +32,11 @@ pm2.connect(function(err) {
 
     console.log('Мониторинг перезапусков запущен');
 
-    bus.on('process:event', function(data) {
-      if (data.event === 'restart') {
-        // Логируем перезапуск процесса
-        logRestart(data.process.name);
-      }
+    // Обработчик событий перезапуска
+    bus.on('process:restart', (packet) => {
+      const processName = packet.process.name || packet.process.pm_id;
+      logToFile(`Процесс ${processName} перезапущен`);
+      console.log(`Процесс ${processName} перезапущен`);
     });
   });
 });
