@@ -2,7 +2,7 @@ import TelegramBot from 'node-telegram-bot-api'
 import { exec } from 'child_process'
 import axios from 'axios';
 import dotenv from 'dotenv'
-import { readdir, stat, readFile } from 'fs'
+import { stat, readFile } from 'fs'
 
 dotenv.config()
 
@@ -12,6 +12,15 @@ const token = process.env.TELEGRAM_TOKEN
 const exec_pass = process.env.EXEC_PASS
   ? process.env.EXEC_PASS
   : logger.error(`EXEC_PASS must be defined in the .env-file`)
+const GIT_STATUS_FOLDER = process.env.GIT_STATUS_FOLDER
+  ? process.env.GIT_STATUS_FOLDER
+  : logger.error(`GIT_STATUS_FOLDER must be defined in the .env-file`)
+const LOG_FILE_PATH_TO_MONITOR = process.env.LOG_FILE_PATH_TO_MONITOR
+  ? process.env.LOG_FILE_PATH_TO_MONITOR
+  : logger.error(`LOG_FILE_PATH_TO_MONITOR must be defined in the .env-file`)
+const MONITOR_INTERVAL_MS = process.env.MONITOR_INTERVAL_MS
+  ? process.env.MONITOR_INTERVAL_MS
+  : logger.error(`MONITOR_INTERVAL_MS must be defined in the .env-file`)
 
 let chatId
 const adviceUrl = 'http://fucking-great-advice.ru/api/random';
@@ -29,7 +38,7 @@ const menu = {
       ],
       [
         { text: 'Check free space' },
-        // { text: 'git status' },
+        { text: 'git status' },
         { text: 'Run command' },
         { text: 'Get advice' },
       ],
@@ -44,7 +53,7 @@ bot.onText(/\/start/, (msg) => {
   chatId = msg.chat.id
 })
 
-bot.onText(/Check apps status/, (msg) => {
+bot.onText(/pm2 list/, (msg) => {
   exec(
     `pm2 jlist | jq -r '.[] | [
       .pm_id, .name, 
@@ -63,8 +72,8 @@ bot.onText(/Check apps status/, (msg) => {
   )
 })
 
-bot.onText(/restart TEST app/, (msg) => {
-  exec('pm2 restart frontend_test', (error, stdout, stderr) => {
+bot.onText(/pm2 restart all/, (msg) => {
+  exec('pm2 restart all', (error, stdout, stderr) => {
     if (error) {
       logger.error(`exec error: ${error}`)
       return
@@ -99,6 +108,22 @@ bot.onText(/Check free space/, (msg) => {
   )
 })
 
+bot.onText(/git status/, (msg) => {
+  exec(
+    `cd ${GIT_STATUS_FOLDER} &\ 
+      pwd $\ 
+      git pull origin main`,
+    (error, stdout, stderr) => {
+      if (error) {
+        logger.error(`exec error: ${error}`)
+        return
+      }
+      const chatId = msg.chat.id
+      bot.sendMessage(chatId, `<pre>${stdout}</pre>`, { parse_mode: 'HTML' })
+    }
+  )
+})
+
 bot.onText(/Get advice/, async (msg) => {
   const chatId = msg.chat.id
   await axios
@@ -112,22 +137,6 @@ bot.onText(/Get advice/, async (msg) => {
         bot.sendMessage(chatId, 'Advices are not available right now');
       });
 })
-
-/* bot.onText(/git status/, (msg) => {
-  exec(
-    `cd ~/web_server &\ 
-      pwd $\ 
-      git pull origin main`,
-    (error, stdout, stderr) => {
-      if (error) {
-        logger.error(`exec error: ${error}`)
-        return
-      }
-      const chatId = msg.chat.id
-      bot.sendMessage(chatId, `<pre>${stdout}</pre>`, { parse_mode: 'HTML' })
-    }
-  )
-}) */
 
 bot.onText(/Run command/, (msg) => {
   const chatId = msg.chat.id
@@ -221,15 +230,10 @@ bot.onText(/Run command/, (msg) => {
 })
 
 /* Set the path to the directory containing the log files to monitor */
-const logDir = '/home/y_dev/logs'
-const filePathToMonitor = `${logDir}/status.log`
-
 let lastModified = 0
 
-const interval = 5000
-
 function checkLogs() {
-  stat(filePathToMonitor, (err, stats) => {
+  stat(LOG_FILE_PATH_TO_MONITOR, (err, stats) => {
     if (err) {
       console.error(`Error getting file stats: ${err}`)
       return
@@ -241,7 +245,7 @@ function checkLogs() {
     /* check if the file was modified since the last check */
     if (lastModified !== 0 && lastModified !== currentModified) {
       /* if the file was modified, read the new content and send a message */
-      readFile(filePathToMonitor, 'utf8', (err, data) => {
+      readFile(LOG_FILE_PATH_TO_MONITOR, 'utf8', (err, data) => {
         if (err) {
           console.error(`Error reading file: ${err}`)
           return
@@ -251,7 +255,7 @@ function checkLogs() {
         const newData = data.split('\n').slice(-2).join('\n')
 
         /* send the new content as a message */
-        bot.sendMessage(205813238, `Server status changed:\n${newData}`)
+        bot.sendMessage(205813238, `Server status changed: \n${newData}`)
       })
     }
 
@@ -260,5 +264,5 @@ function checkLogs() {
   })
 }
 
-/* start checking the log files at the specified interval */
-setInterval(checkLogs, interval)
+/* start checking the log files at the specified MONITOR_INTERVAL_MS */
+setInterval(checkLogs, MONITOR_INTERVAL_MS)
