@@ -55,11 +55,12 @@ bot.onText(/\/start/, (msg) => {
 
 bot.onText(/pm2 list/, (msg) => {
   exec(
-    `pm2 jlist | jq -r '.[] | [
-      .pm_id, .name, 
-      .pm2_env.status, 
-      ((.pm2_env.pm_uptime + 3 * 3600000)/1000 | strftime("%H:%M:%S"))
-    ] | @tsv'`,
+    // `pm2 jlist | jq -r '.[] | [
+    //   .pm_id, .name, 
+    //   .pm2_env.status, 
+    //   ((.pm2_env.pm_uptime + 3 * 3600000)/1000 | strftime("%H:%M:%S"))
+    // ] | @tsv'`,
+    `pm2 list`,
     (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`)
