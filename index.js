@@ -3,16 +3,25 @@ import { SocksProxyAgent } from 'socks-proxy-agent'
 import { exec } from 'child_process'
 import axios from 'axios';
 import dotenv from 'dotenv'
-import { readdir, stat, readFile } from 'fs'
+import { stat, readFile } from 'fs'
 
 dotenv.config()
 
 const token = process.env.TELEGRAM_TOKEN
   ? process.env.TELEGRAM_TOKEN
-  : logger.error(`TELEGRAM_TOKEN must be defined in the .env-file`)
+  : console.error(`TELEGRAM_TOKEN must be defined in the .env-file`)
 const exec_pass = process.env.EXEC_PASS
   ? process.env.EXEC_PASS
   : logger.error(`EXEC_PASS must be defined in the .env-file`)
+const GIT_STATUS_FOLDER = process.env.GIT_STATUS_FOLDER
+  ? process.env.GIT_STATUS_FOLDER
+  : logger.error(`GIT_STATUS_FOLDER must be defined in the .env-file`)
+const LOG_FILE_PATH_TO_MONITOR = process.env.LOG_FILE_PATH_TO_MONITOR
+  ? process.env.LOG_FILE_PATH_TO_MONITOR
+  : logger.error(`LOG_FILE_PATH_TO_MONITOR must be defined in the .env-file`)
+const MONITOR_INTERVAL_MS = process.env.MONITOR_INTERVAL_MS
+  ? process.env.MONITOR_INTERVAL_MS
+  : logger.error(`MONITOR_INTERVAL_MS must be defined in the .env-file`)
 /* api.telegram.org из РФ недоступен - ходим через локальный xray (socks5) */
 const telegramSocksProxy = process.env.TELEGRAM_SOCKS_PROXY
 
@@ -59,15 +68,15 @@ const menu = {
   reply_markup: {
     keyboard: [
       [
-        { text: 'Check apps status' },
-        { text: 'restart TEST app' },
+        { text: 'pm2 list' },
+        { text: 'pm2 restart all' },
         { text: 'WTF?' },
       ],
       [
-        { text: 'Check free space' },
-        // { text: 'git status' },
-        { text: 'Run command' },
-        { text: 'Get advice' },
+        { text: 'check free space' },
+        { text: 'git status' },
+        { text: 'run command' },
+        { text: 'get advice' },
       ],
     ],
     resize_keyboard: true,
@@ -76,21 +85,21 @@ const menu = {
 }
 
 bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(msg.chat.id, 'Wellcome to Linux server monitoring bot!', menu)
+  bot.sendMessage(msg.chat.id, 'Wellcome to linux server monitoring bot!', menu)
   chatId = msg.chat.id
 })
 
-bot.onText(/Check apps status/, (msg) => {
+bot.onText(/pm2 list/, (msg) => {
   exec(
-    `pm2 jlist | jq -r '.[] | [
-      .pm_id, .name, 
-      .pm2_env.status, 
-      ((.pm2_env.pm_uptime + 3 * 3600000)/1000 | strftime("%H:%M:%S"))
-    ] | @tsv'
-  `,
+    // `pm2 jlist | jq -r '.[] | [
+    //   .pm_id, .name, 
+    //   .pm2_env.status, 
+    //   ((.pm2_env.pm_uptime + 3 * 3600000)/1000 | strftime("%H:%M:%S"))
+    // ] | @tsv'`,
+    `pm2 list`,
     (error, stdout, stderr) => {
       if (error) {
-        logger.error(`exec error: ${error}`)
+        console.error(`exec error: ${error}`)
         return
       }
       const chatId = msg.chat.id
@@ -99,10 +108,10 @@ bot.onText(/Check apps status/, (msg) => {
   )
 })
 
-bot.onText(/restart TEST app/, (msg) => {
-  exec('pm2 restart frontend_test', (error, stdout, stderr) => {
+bot.onText(/pm2 restart all/, (msg) => {
+  exec('pm2 restart all', (error, stdout, stderr) => {
     if (error) {
-      logger.error(`exec error: ${error}`)
+      console.error(`exec error: ${error}`)
       return
     }
     const chatId = msg.chat.id
@@ -111,19 +120,39 @@ bot.onText(/restart TEST app/, (msg) => {
 })
 
 bot.onText(/WTF?/, (msg) => {
-  exec('tail -n 50 /home/y_dev/nohup.out', (error, stdout, stderr) => {
+  exec('tail -n 50 $HOME/nohup.out', (error, stdout, stderr) => {
     if (error) {
-      logger.error(`exec error: ${error}`)
+      console.error(`exec error: ${error}`)
       return
     }
+
+    // Заменяем все символы тегов на подчеркивание
+    const cleanedOutput = stdout.replace(/<[^>]+>/g, '_')
+
     const chatId = msg.chat.id
-    bot.sendMessage(chatId, `<pre>${stdout}</pre>`, { parse_mode: 'HTML' })
+    bot.sendMessage(chatId, `<pre>${cleanedOutput}</pre>`, { parse_mode: 'HTML' })
   })
 })
 
-bot.onText(/Check free space/, (msg) => {
+bot.onText(/check free space/, (msg) => {
   exec(
-    'df -h --output=source,size,used,avail /dev/mapper/f--vg-root',
+    'df -Th',
+    (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`)
+        return
+      }
+      const chatId = msg.chat.id
+      bot.sendMessage(chatId, `<pre>${stdout}</pre>`, { parse_mode: 'HTML' })
+    }
+  )
+})
+
+bot.onText(/git status/, (msg) => {
+  exec(
+    `cd ${GIT_STATUS_FOLDER} &\ 
+      pwd $\ 
+      git status`,
     (error, stdout, stderr) => {
       if (error) {
         logger.error(`exec error: ${error}`)
@@ -135,7 +164,7 @@ bot.onText(/Check free space/, (msg) => {
   )
 })
 
-bot.onText(/Get advice/, async (msg) => {
+bot.onText(/get advice/, async (msg) => {
   const chatId = msg.chat.id
   await axios
       .get(adviceUrl)
@@ -148,22 +177,6 @@ bot.onText(/Get advice/, async (msg) => {
         bot.sendMessage(chatId, 'Advices are not available right now');
       });
 })
-
-/* bot.onText(/git status/, (msg) => {
-  exec(
-    `cd ~/web_server &\ 
-      pwd $\ 
-      git pull origin main`,
-    (error, stdout, stderr) => {
-      if (error) {
-        logger.error(`exec error: ${error}`)
-        return
-      }
-      const chatId = msg.chat.id
-      bot.sendMessage(chatId, `<pre>${stdout}</pre>`, { parse_mode: 'HTML' })
-    }
-  )
-}) */
 
 bot.onText(/Run command/, (msg) => {
   const chatId = msg.chat.id
@@ -257,15 +270,10 @@ bot.onText(/Run command/, (msg) => {
 })
 
 /* Set the path to the directory containing the log files to monitor */
-const logDir = '/home/y_dev/logs'
-const filePathToMonitor = `${logDir}/status.log`
-
 let lastModified = 0
 
-const interval = 5000
-
 function checkLogs() {
-  stat(filePathToMonitor, (err, stats) => {
+  stat(LOG_FILE_PATH_TO_MONITOR, (err, stats) => {
     if (err) {
       console.error(`Error getting file stats: ${err}`)
       return
@@ -277,7 +285,7 @@ function checkLogs() {
     /* check if the file was modified since the last check */
     if (lastModified !== 0 && lastModified !== currentModified) {
       /* if the file was modified, read the new content and send a message */
-      readFile(filePathToMonitor, 'utf8', (err, data) => {
+      readFile(LOG_FILE_PATH_TO_MONITOR, 'utf8', (err, data) => {
         if (err) {
           console.error(`Error reading file: ${err}`)
           return
@@ -287,7 +295,7 @@ function checkLogs() {
         const newData = data.split('\n').slice(-2).join('\n')
 
         /* send the new content as a message */
-        bot.sendMessage(205813238, `Server status changed:\n${newData}`)
+        bot.sendMessage(205813238, `Server status changed: \n${newData}`)
       })
     }
 
@@ -296,5 +304,5 @@ function checkLogs() {
   })
 }
 
-/* start checking the log files at the specified interval */
-setInterval(checkLogs, interval)
+/* start checking the log files at the specified MONITOR_INTERVAL_MS */
+setInterval(checkLogs, MONITOR_INTERVAL_MS)
