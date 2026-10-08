@@ -1,4 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api'
+import { SocksProxyAgent } from 'socks-proxy-agent'
 import { exec } from 'child_process'
 import axios from 'axios';
 import dotenv from 'dotenv'
@@ -21,12 +22,47 @@ const LOG_FILE_PATH_TO_MONITOR = process.env.LOG_FILE_PATH_TO_MONITOR
 const MONITOR_INTERVAL_MS = process.env.MONITOR_INTERVAL_MS
   ? process.env.MONITOR_INTERVAL_MS
   : logger.error(`MONITOR_INTERVAL_MS must be defined in the .env-file`)
+/* api.telegram.org из РФ недоступен - ходим через локальный xray (socks5) */
+const telegramSocksProxy = process.env.TELEGRAM_SOCKS_PROXY
 
 let chatId
 const adviceUrl = 'http://fucking-great-advice.ru/api/random';
 
-/* Create a bot instance */
-const bot = new TelegramBot(token, { polling: true })
+/* Create a bot instance. Polling короткий: через туннель долгие соединения рвутся */
+const bot = new TelegramBot(token, {
+  polling: { interval: 300, params: { timeout: 3 } },
+  request: telegramSocksProxy
+    ? { agent: new SocksProxyAgent(telegramSocksProxy) }
+    : undefined,
+})
+
+bot.on('polling_error', (err) => {
+  console.warn(`polling: повтор после ошибки (${err.message})`)
+})
+
+/* Туннель изредка рвёт соединение - без повтора сообщение теряется. Повторяем
+   только сетевые сбои (паузы 1/2/4 с), ответы самого Telegram (ETELEGRAM) - нет */
+const NETWORK_ERROR = /ECONNRESET|ETIMEDOUT|ECONNREFUSED|socket disconnected|socket hang up/
+const RETRY_DELAYS_MS = [1000, 2000, 4000]
+const sendMessageOnce = bot.sendMessage.bind(bot)
+
+bot.sendMessage = (...args) => {
+  const sending = (async () => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await sendMessageOnce(...args)
+      } catch (err) {
+        if (attempt === RETRY_DELAYS_MS.length || !NETWORK_ERROR.test(err.message)) {
+          throw err
+        }
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]))
+      }
+    }
+  })()
+  /* Логируем здесь: необработанный reject нативного промиса уронил бы процесс */
+  sending.catch((err) => console.error(`sendMessage не доставлено: ${err.message}`))
+  return sending
+}
 
 const menu = {
   reply_markup: {

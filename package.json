@@ -18,7 +18,8 @@
     "dotenv": "^16.3.1",
     "fs": "^0.0.1-security",
     "node-telegram-bot-api": "^0.61.0",
-    "pm2": "^5.4.2"
+    "pm2": "^5.4.2",
+    "socks-proxy-agent": "^8.0.5"
   },
   "devDependencies": {
     "eslint": "^8.48.0",
